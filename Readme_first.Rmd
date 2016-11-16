@@ -1,0 +1,18 @@
+---
+title: "R Resources for Trinity College Dublin R users group"
+author: ""
+date: "2016 and beyond"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+
+#### This Github folder contains teaching materials prepared by the TCD R-Users group.
+
+
+Filenames and resources are as follows..
+
+1. Readme.rmd  - List of available resource 
