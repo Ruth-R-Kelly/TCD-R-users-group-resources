@@ -15,7 +15,7 @@ knitr::opts_chunk$set(echo = TRUE)
 
 There are lots of useful online resources to get you started such as:
 
-* [https://guides.github.com/] - which focusses on using the [GitHub desktop client](https://desktop.github.com/)
-* [http://happygitwithr.com/] - which includes a tutorial on setting it up to work with [Rstudio](https://www.rstudio.com/products/RStudio/) directly
+* <https://guides.github.com/> - which focusses on using the [GitHub desktop client](https://desktop.github.com/)
+* <http://happygitwithr.com/> - which includes a tutorial on setting it up to work with [Rstudio](https://www.rstudio.com/products/RStudio/) directly
 
 
