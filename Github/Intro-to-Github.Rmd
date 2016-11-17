@@ -1,0 +1,21 @@
+---
+title: "Intro-to-GitHub"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+## Git and GitHub
+
+[Git](https://git-scm.com/) is a version control software for keeping track of changes made to projects. It works best with text files and so is most often used to keep track of code development projects, but it is equally capable of tracking simple text file projects including LaTeX projects. It can work with pretty much any computer language.
+
+[GitHub](https://github.com/) is an online version of Git that allows you to synchronise your work across computers, and to share your code and even share the development of the project with other people. In its most simple form, you can use GitHub as a sort of DropBox but with the added benefit of version control. In full implementation, you would use it to share code such as if you create an R-package, or to share development of projects with code collaborators. You can set up both public and private repositories, with academic accounts granting you unlimited private repositories.
+
+There are lots of useful online resources to get you started such as:
+
+* [https://guides.github.com/] - which focusses on using the [GitHub desktop client](https://desktop.github.com/)
+* [http://happygitwithr.com/] - which includes a tutorial on setting it up to work with [Rstudio](https://www.rstudio.com/products/RStudio/) directly
+
+

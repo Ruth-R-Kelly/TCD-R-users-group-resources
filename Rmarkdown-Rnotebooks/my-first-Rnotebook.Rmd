@@ -17,9 +17,4 @@ Add a new chunk by clicking the *Insert Chunk* button on the toolbar or by press
 
 When you save the notebook, an HTML file containing the code and output will be saved alongside it (click the *Preview* button or press *Cmd+Shift+K* to preview the HTML file).
 
-## Github intro Rusers
-Illustrating how to use github.
 
-And another small change.
-
-I added a new branch, and want to commit some changes to it. And anther change.
