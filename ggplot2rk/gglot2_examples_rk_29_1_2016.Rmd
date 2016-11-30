@@ -1,0 +1,254 @@
+---
+title: "ggplot2_30_12_2016vr1"
+author: "Ruth Kelly"
+date: "29 November 2016"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+
+```{r setup files and libraries}
+setwd("C:/R/Rusers_group_testing/ggplot2rk")
+
+library("ggplot2")
+library("datasets")
+library("RColorBrewer")
+```
+
+## Notes and code for TCD R-users group 
+### Ggplo2 package by Hadley Wickham
+
+####  The grammar of graphics - 
+
+##### Core elements:
+  1. Data
+  2. Aesthetics - aes()
+  3. Geoms - geom_()
+  4. Themes - theme()
+  5. Guides - guide()
+
+##### Data
+
+The information you want to communicate.  This information is generally stored in a data frame, matrix or table
+
+##### Aesthetics 
+
+The aesthetic attributes you use to represent your data.  These translate the information stored in columns in your data frame into visual properties of the plot
+such as point location, bar height, colour, size, shape etc..
+
+##### Geoms
+
+These are the geometric objects on the plot, e.g. lines, bars and points
+
+##### Themes 
+
+These adjust the overall appearance of the plot, e.g. background colour
+
+##### Guides
+
+These objects help the viewer to interpret the plot, e.g. axis labels and legends.
+
+
+###  Let's have a look at some code examples of how these work 
+
+First an example using the freely available Iris dataset. 
+
+```{r iris scatter, echo=TRUE}
+data(iris)
+
+iris$abundance <- rpois(nrow(iris), 20)
+
+head(iris)
+
+
+#### first we set up the plot using the function ggplot and tell the function
+#### which data to plot onto the x and y axes 
+
+Piris <- ggplot(iris, aes(x = Sepal.Width, y =  Sepal.Length))
+
+### then we can add different geoms (shapes) to our plot
+
+Piris2 <- Piris + geom_point()
+Piris2 
+
+Piris3 <- Piris2 + geom_line()
+Piris3 
+
+Piris4 <- Piris2 + geom_smooth(method = 'loess')
+Piris4
+
+Piris5 <- Piris2 + geom_smooth(method = 'lm')
+Piris5
+
+### Each element added to a plot is refered to as a layer in ggplot 'language'
+
+```
+
+### Grouping objects and coding with colour shape and size etc. 
+
+```{r iris scatter with colour groups, echo=TRUE}
+
+### We can code the points by colours by mapping the column $Species from our 
+### data frame to the aesthetic "colour"... as follows 
+
+Piris <- ggplot(iris, aes(x = Sepal.Width, y =  Sepal.Length, colour = Species))
+Piris2 <- Piris + geom_point()
+
+Piris3 <- Piris2 + geom_smooth(method = "lm")
+Piris3
+
+### We can also adjust sizes, colours, shapes etc. for specific inside geoms.. e.g. 
+names(iris)
+Piris <- ggplot(iris, aes(x = Sepal.Width, y =  Sepal.Length, colour = Species))
+Piris2 <- Piris + geom_point(aes(shape = iris$Species, size = iris$abundance/2,
+                                 alpha = 1/10))
+Piris2 
+
+### Note: alpha adds transparency.. 
+```
+
+#### Now let's try adjusting the plot using "themes"..
+
+```{r barplot example - by Siobhan Porter, echo=TRUE}
+Cam <- read.csv("Central_america.csv")
+summary(Cam)
+
+### First set up your plot by choosing which variables to show on the x and y axes
+### and add geom_bar() which draws bars
+
+p1 <- ggplot(Cam, aes(x = country, y = Density)) + 
+  geom_bar(stat = "identity", fill = "light blue", colour = "black")
+
+# stat = "identity" - maps the value of the data to the y aesthetic (the #alternative being 'stat = "bin", which maps the number of cases)
+# "fill" = fill colour - can use web colours in R
+# "colour" = outline colour
+
+p1
+
+## Change the y label using ylab()
+p2 <- p1 + ylab("Population density")
+
+p2
+
+## Add title using ggtitle(). (*km^2 creates superscript 2)
+p3 <- p2 + ggtitle(expression(paste("Average population per " *km^2)))
+
+p3
+
+## Add values to the bars - vjust alters the height of the numbers (vertical justification))
+p4 <- p3 + geom_text(aes(label=round(Density,1)), vjust=1.2, size = 3)
+p4
+
+
+### We use theme() to change the general look of the plot ####
+###  make the title go to the centre of the plot
+p5 <- p4 + theme(plot.title = element_text(hjust = 0.5))
+p5
+
+## To get rid of the grey background grid
+p6 <- p5 + theme(panel.grid.major = element_blank(),
+                 panel.grid.minor = element_blank()) +
+               theme(panel.background = element_blank())
+
+p6
+
+## get rid of the x axis label
+p6 <- p5 + theme(axis.title.x=element_blank())
+
+p6
+
+## Bold face and larger text (+ vjust to move the bigger label away from the plot)
+
+p7 <- p6 + theme(axis.title.y=element_text(face="bold", size=15, vjust=1.5))
+
+p7
+
+## Axis text bold face, black and bigger
+
+p8 <- p7 +  theme(axis.text.x=element_text(face="bold", size=8, colour = "black")) +
+  theme(axis.text.y=element_text(face="bold", size=15, colour = "black"))
+
+p8
+
+## Change plot title
+p9 <- p8 + theme(plot.title = element_text(face="bold", size=25))
+
+p9
+
+
+################################
+#### All together now.. ####
+###############################
+
+p <- ggplot(Cam, aes(x = country, y = Density)) + 
+          geom_bar(stat = "identity", fill = "light blue", colour = "black") 
+
+p <- p +  ylab("Population density") +
+  ggtitle(expression(paste("Average population per " *km^2))) +
+  geom_text(aes(label=Density), vjust=1.2, size = 3) + 
+  theme(panel.grid.major = element_blank(), panel.grid.minor = element_blank()) +
+  theme(panel.background = element_blank()) +
+  theme(axis.title.x=element_blank()) + 
+  theme(axis.title.y=element_text(face="bold", size=15, vjust=1.5)) +
+  theme(axis.text.x=element_text(face="bold", size=8, colour = "black")) +
+  theme(axis.text.y=element_text(face="bold", size=8, colour = "black")) +
+  theme(plot.title = element_text(lineheight=.8, face="bold", size=15, hjust =0.5)) 
+
+print(p)
+ 
+```
+
+#### Using "guides" to adjust the legend
+
+An example with a coeffient plot (because I like them)
+
+
+```{r coefficient plot, echo=TRUE}
+
+All_mods <- read.csv("pollinator_mods.csv")
+
+summary(All_mods)
+
+
+### Plot of model coefficients
+zp1 <- ggplot(All_mods, aes(colour = Species, shape = Species))
+
+zp2 <- zp1 + geom_hline(yintercept = 0, colour = gray(1/4), lty = 2) + 
+  geom_pointrange(aes(x = modelName, y = Coefficient, 
+                      ymin = Confint_L,
+                      ymax = Confint_U),show.legend=T,
+                  lwd = 0.5, position = position_dodge(width = 2/3)) + 
+  ggtitle("Visiting pollinator abundance") + 
+  theme(plot.title = element_text(hjust = 0.5)) + 
+  coord_flip() + theme_bw() + 
+  theme(axis.title.y=element_blank()) + 
+  theme(plot.title = element_text(face="bold", size=15, hjust = 0.5)) + 
+   theme(legend.text = element_text(face = "italic", size = 8))  + 
+  scale_colour_brewer(palette = "Set1") + 
+  theme(axis.text.x = element_text(size = 8)) + 
+  theme(axis.text.y = element_text(size = 8)) + 
+  theme(axis.title.x = element_text(size = 8)) + 
+  theme(plot.title = element_text(size = 11)) + 
+  guides(colour = guide_legend(title = NULL))  + 
+  guides(shape = guide_legend(title = NULL))
+
+print(zp2)
+
+```
+
+### Colour palettes
+
+Because a lot of people are excited about these..
+
+```{r colour palettes}
+
+display.brewer.all()
+
+
+```
+
+### Have fun plotting :)  There are many more examples available online!
+
