@@ -10,9 +10,17 @@ knitr::opts_chunk$set(echo = TRUE)
 ```
 
 
-#### This Github folder contains teaching materials prepared by the TCD R-Users group.
+#### This Github folder contains teaching materials and notes prepared by the TCD R-Users group.
 
 
 Filenames and resources are as follows..
 
 1. Readme.rmd  - List of available resource 
+
+2. Rmarkdown-Rnotebooks - by Andrew Jackson Nov. 2016
+
+3. Github - Using GitHub by Andrew Jackson Nov. 2016
+
+4. ggplot2rk - Using ggplot2 by Ruth Kelly Dec. 2016
+
+5. sem_qy -  Causality and Structural Equation Modelling by Qiang Yang Jan 2017 
