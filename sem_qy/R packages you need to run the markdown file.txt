@@ -1,0 +1,5 @@
+# R packages you need to install before running the R markdown file
+
+install.packages('prettydoc')
+install.packages('lavaan')
+install.packages('semPlot')
