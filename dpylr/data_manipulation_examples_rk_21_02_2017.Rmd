@@ -28,7 +28,7 @@ library("reshape2")
 
 #  
 
-The main aim of this session is to introduce some helpful functions for data manipulation. This list by no means comprehensive, just a list of a few which I use most often in my own work.  
+The main aim of this session is to introduce some helpful functions for data manipulation. This list is by no means comprehensive, just a list of a few which I use most often in my own work.  
 
 #### Some advantages of using 'dplyr' for this include:
   1. Useful functions
