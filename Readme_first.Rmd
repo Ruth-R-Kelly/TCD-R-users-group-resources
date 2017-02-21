@@ -23,4 +23,4 @@ Filenames and resources are as follows..
 
 4. ggplot2rk - Using ggplot2 by Ruth Kelly Dec. 2016
 
-5. sem_qy -  Causality and Structural Equation Modelling by Qiang Yang Jan 2017 
+5. sem_qy -  Causality and Structural Equation Modelling by Qiang Yang Jan. 2017 

@@ -1,0 +1,367 @@
+---
+title: #"Notes and code for TCD R-users group - Data manipulation"
+author: #"Ruth Kelly & Qiang Yang"
+date: #"21 February 2017"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+
+```{r setup files and libraries, include = FALSE, echo = TRUE}
+library("plyr")
+library("dplyr")
+library("reshape2")
+```
+
+##  TCD R-users group notes and code 
+
+#  
+
+### Data manipulation in R using the packages 'dplyr' and 'reshape2' by Hadley Wickham
+
+#  
+
+####  Notes and code by Ruth Kelly with ddply example by Qiang Yang 21/02/2016
+
+#  
+
+The main aim of this session is to introduce some helpful functions for data manipulation. This list by no means comprehensive, just a list of a few which I use most often in my own work.  
+
+#### Some advantages of using 'dplyr' for this include:
+  1. Useful functions
+  2. User friendly function names which make your code more readable
+  3. Fast implementation in C++ 
+
+
+####  Code examples 
+
+Note: in general the syntax for dpylr and reshape2 functions is to put the name of the data object you are working with first ... 
+
+eg. filter(data_frame_name, column_name1, column_name2)
+
+This will be clearer in examples below..
+
+# 
+
+#### Some functions for querying and arranging dataframes
+
+filter()  - Selecting rows from your dataframe based on information in the columns
+
+
+
+```{r function filter, echo=TRUE}
+data(iris)
+
+summary(iris)
+
+## Iris is a dataframe with information about flowering plants. 
+
+## Suppose for example that we only want data for the plants of the species "versicolor"
+## we would write
+
+
+versicolor_data <- filter(iris, Species == "versicolor")
+
+summary(versicolor_data)
+
+### Now we have only the data for this species.  If we wanted two species we would use 
+### the "|" symbol which means OR
+
+set_ver_data <- filter(iris, Species == "versicolor" |
+                         Species == "setosa")
+
+summary(set_ver_data)
+
+## Or if we have a list of species which we want to keep then we use the operator "%in%"
+## which means "is in list"
+
+l1 <- c("versicolor", "setosa")
+
+set_ver_data2 <- filter(iris, Species %in% l1)
+
+summary(set_ver_data2)
+
+## After removing factor levels, it is usually a good idea to use the function
+## droplevels()  so that they no longer appear in the summary/plots etc.. This saves
+## confusion later
+
+## eg.
+
+set_ver_data <- droplevels(set_ver_data)
+summary(set_ver_data)
+
+#### filter can also be used to choose rows based on continuous variables. 
+
+## eg. To get plants with a petal length > 3 use
+
+long_leaves <- filter(iris, Petal.Length > 3)
+
+summary(long_leaves)
+
+### when working with numeric variables we can also use the operators "&" 
+
+large_leaves <- filter(iris, Petal.Length > 5.7 & Petal.Width > 2)
+
+summary(large_leaves)
+
+### Warning: for some reason the operator "!=" does not work as expected with filter.. 
+
+```
+
+### 
+
+select()  - Selecting columns from your dataframe based on their names
+
+```{r function select, echo=TRUE}
+
+### Again using iris
+
+data(iris)
+
+names(iris)
+
+##  If I only wanted the Species names and information about petals I could use select
+## e.g. 
+
+Petals <- select(iris, Species, Petal.Length, Petal.Width) 
+head(Petals)
+
+## Note this also changes the column order. 
+
+## There are lots of options for selecting columns this way.. 
+## Here are a few from the help menu 
+## eg.
+
+head(select(iris, ends_with("Width")))
+head(select(iris, contains("etal")))
+
+vars <- c("Petal.Length", "Petal.Width")
+head(select(iris, one_of(vars)))
+
+
+
+```
+
+## 
+
+arrange() - which rearranges the order of the rows in the data based on a variable
+
+
+```{r arrange function, echo=TRUE}
+
+data(iris)
+
+names(iris)
+
+head(arrange(iris, Petal.Length))
+
+
+
+```
+
+
+#### Some functions from the package 'reshape2' for changing the format of your dataframes
+
+melt() - The function melt rearranges the data so that several columns containing measurements are turned into a single column called "value", and the column titles become a separate column of factor levels.  This is easier to describe by example.. see below.. 
+
+```{r function melt in the package reshape2 }
+
+
+### Here I'm creating an example dataframe with information about animals in it.
+### Each row contains information relating to each animal species
+
+creatures <- data.frame(animal = c("Unicorn", "Antelope", "Centaur", "Aarkvark","Trout"),
+               real = c("no","yes", "no", "yes", "maybe"),
+               bodymass = c(1300,1200, 1500, 500, 300),
+               intellect = c(120, 80, 100,30,10),
+               speed = c(300, 200, 300, 20, 50))
+
+creatures               
+
+stacked_attributes <- melt(creatures, id = c("animal", "real"), value.name = "Value")
+stacked_attributes
+
+```
+
+dcast() - Is pretty much the opposite of 'melt' above.  It takes a column of factor levels and a column of values and turns each factor level into a separate column
+
+
+```{r function dcast in the package reshape2 }
+
+## For example we can change the melt example above back to it's original form using..
+
+dcast(stacked_attributes, formula = animal + real ~ variable, value.var = "Value")
+
+```
+
+#### Merging information from different dataframes
+
+often we recieve information about the same species/sites from different sources and want
+to merge them into one dataset based on a common variable. This can be done using the function 'merge' which is in the base package (i.e. no need to download any extra libraries).  There are extra functions in 'dplyr' for doing this, but I find that 'merge' does everything I need. 
+
+```{r example of the merge function}
+
+### In this example we've recieved some information about where our animals where measured, in the form of latitude and longitude coordinates. 
+### 
+
+## This next code creates the example dataset
+
+lat_long <- data.frame(Animal = c( "Antelope", "Centaur","Unicorn", "Aarkvark","Trout",                 "Salmon"),
+               latitude = c(45,53,-60, 12, 120, 43),
+               longitude = c(60,40, 33, -34, 86, 58))
+
+names(lat_long)
+
+names(creatures)
+
+### In this example I want to add the information of latitude and longitude to the ###dataframe 'creatures' so that it is added to the correct animals.  This is called a ###merge, and we need to specify the columns in the dataset, which should be used as ###reference.  Here, it is the column 'animal' in the dataset 'creatures' and the column ###'Animal' in the dataset 'lat_long'. 
+
+# eg.
+
+merge(x = creatures, y = lat_long, by.x = "animal", by.y = "Animal", all = TRUE)
+
+##  Note the argument all = TRUE controls whether all information from both datasets is ## retained.  If, for example, we only wanted the latitude and longitude data for 
+## animals which are already in the 'creatures' dataset we would use all.x = TRUE
+
+## i.e. 
+
+merge(x = creatures, y = lat_long, by.x = "animal", by.y = "Animal", all.x = TRUE)
+
+
+```
+
+
+
+
+#### Some functions for summarising your data. 
+
+1. summarise() - package 'dplyr'
+2. ddply() - package 'plyr'
+
+Both of these functions allow you to easily summarise data based on grouping variables. 
+For example, the average value per site, per species etc.  The main difference is that
+ddply() allows more flexibility because you can use your own summary functions (not just standard ones like mean, min, max and sd).  
+
+See examples below:
+
+summarise()
+
+```{r summarise function}
+
+## again using iris
+## here I summarise by species. 
+
+Average_petal_length <- summarise(group_by(iris,Species),
+                           mean(Petal.Length))
+
+Average_petal_length
+
+## If you want to summarise more variables just add these at the end of the function..
+## e.g. 
+
+summarise(group_by(iris,Species),
+                           mean(Petal.Length),
+                           sd(Petal.Length),
+                           mean(Petal.Width),
+                           sd(Petal.Width))
+
+
+## You can also add levels to the grouping factor.  
+
+## For example, suppose we add a column to our data for site. 
+
+iris$site <- rep(c("Dublin","Cork", "Galway"), by = 50)
+
+## now if we want to summarise per species within site, then we do this in the
+## 'group_by' part of the summarise function
+
+
+summarise(group_by(iris,site, Species),
+                           mean(Petal.Length),
+                           sd(Petal.Length),
+                           mean(Petal.Width),
+                           sd(Petal.Width),
+                          ratio = mean(Petal.Length)/mean(Petal.Width) )
+
+
+```
+
+
+
+2. ddply()
+
+```{r function ddply from package plyr code by Marvin Yang}
+
+# example data:
+# I randomly generate a dataset as the example data
+# in this data, there are 5 sampling site, in each site there are three blocks, and one #block have 6 plot with 4 subplots embedded in it
+# taxon is the species
+# biomass is the biomass for each species
+# time is the sampling time
+mydata<-expand.grid(
+  site_code = paste(letters[1:5],letters[6:10],sep=''),
+  block     = 1:3,
+  plot      = 1:6,
+  subplot   = 1:4,
+  taxon     = paste('species.',1:20,sep=''),
+  time      = 0:12
+)
+mydata<-transform(mydata,biomass=rexp(nrow(mydata)))
+
+# let's see how we can use ddply to calculate the temporval variability of the total #biomass in each subplot
+
+#method 1
+# we can use twice ddply - without self-defined function
+#sum the total mass for each subplot in each sampling time
+sum.biomass.each.time<-ddply(
+  mydata,
+  ~ site_code + block + plot + subplot + time,
+  summarize,
+  total.mass = sum(biomass)
+)
+
+head(sum.biomass.each.time)
+
+# then we calculate the temporal variability using sum.biomass.each.time
+tv.total.mass.for.subplots.1<-ddply(
+  sum.biomass.each.time,
+  ~ site_code + block + plot + subplot,
+  summarize,
+  temporal.variability = sd(total.mass)/mean(total.mass)
+)
+
+# method 2
+# we can also using functions defined by ourselves. this is extremly useful when you want #to do some complicated job for the subset of the data
+# tv.f is a function to calculate the temporal variability of the toal biomass for a #given subplot
+
+tv.f<-function(x){
+  #input x is the subset of your big dataset
+  #I first select the three columns including taxon, time, and biomass
+  x.selected<-select(x,taxon,time,biomass)
+  #then I make this three-column data to a matrix format with taxon
+  # as row and time as column
+  x.selected<-acast(x.selected,taxon~time,value.var='biomass')
+  # then i calculate the total biomass at each time point
+  total.mass<-colSums(x.selected)
+  temporal.variability<-sd(total.mass)/mean(total.mass)
+  setNames(temporal.variability, 'temporal.variability')
+}
+
+tv.total.mass.for.subplots.2<-ddply(
+  mydata,
+  ~ site_code + block + plot + subplot,
+  tv.f)  
+
+#note, when you include your own functions in the ddply, you need to drop the term #summarize
+
+
+# check if the two approaches give same result
+identical(tv.total.mass.for.subplots.1,tv.total.mass.for.subplots.2)
+# return true
+
+
+```
+
