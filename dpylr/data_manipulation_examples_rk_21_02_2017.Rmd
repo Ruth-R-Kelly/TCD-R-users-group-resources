@@ -355,11 +355,11 @@ tv.total.mass.for.subplots.2<-ddply(
   ~ site_code + block + plot + subplot,
   tv.f)  
 
-#note, when you include your own functions in the ddply, you need to drop the term #summarize
+#note, when you include your own functions in the ddply, you #need to drop the term #summarize
 
 
 # check if the two approaches give same result
-identical(tv.total.mass.for.subplots.1,tv.total.mass.for.subplots.2)
+all.equal(tv.total.mass.for.subplots.1,tv.total.mass.for.subplots.2)
 # return true
 
 

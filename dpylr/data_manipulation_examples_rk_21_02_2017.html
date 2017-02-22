@@ -566,12 +566,12 @@ sum.biomass.each.time&lt;-ddply(
 
 head(sum.biomass.each.time)</code></pre>
 <pre><code>##   site_code block plot subplot time total.mass
-## 1        af     1    1       1    0   20.18485
-## 2        af     1    1       1    1   15.25847
-## 3        af     1    1       1    2   23.64579
-## 4        af     1    1       1    3   13.89836
-## 5        af     1    1       1    4   23.71101
-## 6        af     1    1       1    5   16.07641</code></pre>
+## 1        af     1    1       1    0   19.26349
+## 2        af     1    1       1    1   14.10031
+## 3        af     1    1       1    2   25.27373
+## 4        af     1    1       1    3   19.91460
+## 5        af     1    1       1    4   18.22114
+## 6        af     1    1       1    5   22.10504</code></pre>
 <pre class="r"><code># then we calculate the temporal variability using sum.biomass.each.time
 tv.total.mass.for.subplots.1&lt;-ddply(
   sum.biomass.each.time,
@@ -602,12 +602,12 @@ tv.total.mass.for.subplots.2&lt;-ddply(
   ~ site_code + block + plot + subplot,
   tv.f)  
 
-#note, when you include your own functions in the ddply, you need to drop the term #summarize
+#note, when you include your own functions in the ddply, you #need to drop the term #summarize
 
 
 # check if the two approaches give same result
-identical(tv.total.mass.for.subplots.1,tv.total.mass.for.subplots.2)</code></pre>
-<pre><code>## [1] FALSE</code></pre>
+all.equal(tv.total.mass.for.subplots.1,tv.total.mass.for.subplots.2)</code></pre>
+<pre><code>## [1] TRUE</code></pre>
 <pre class="r"><code># return true</code></pre>
 </div>
 </div>
