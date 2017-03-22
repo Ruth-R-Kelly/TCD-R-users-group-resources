@@ -52,3 +52,5 @@ Temporary Items
 # rebuild them.
 *.nb.html
 
+.Rhistory
+
