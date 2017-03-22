@@ -1,0 +1,80 @@
+---
+title: "Random Intercept Models - with linear covariates"
+output:
+  html_document: default
+  html_notebook: default
+---
+
+
+We can extend the concept of the variance partitioning model by including additional linear covariates. This really highlights why considering random effects is important.
+
+## Some simulated data
+
+The data simulated here comprise repeated measures of the same individual (or individuals nested within a group) whose response variable $y$ changes linearly with covariate $x$. The groups of data points have the same simulated slope, but have different intercepts which we will model with our random slopes model.
+
+```{r sim-data}
+rm(list=ls())
+graphics.off()
+set.seed(2)
+
+library(viridis)
+
+n.groups <- 5 # number of individuals
+n.obs <- 5 # observations per individual
+
+# some coefficients
+b1 <- -3.5
+b0 <- 20
+
+# a linear covariate
+x <- rep(1:n.obs, n.groups)
+
+# random effect for each individual
+s.groups <- 23
+V <- rnorm(n.groups, 0, s.groups)
+
+# The grouping variable
+G <- sort(rep(1:n.groups, n.obs))
+
+
+# simulate the data
+mu <- b0 + b1 * x + V[G]
+s <- 2
+Y <- mu + rnorm(n.obs * n.groups, 0, s)
+
+mydata <- data.frame(Y, x, G)
+
+library(viridis)
+palette(viridis(n.groups))
+plot(Y ~ x, col = G, data = mydata, las = 1, bty = "L")
+
+
+
+
+
+```
+
+Now we can model the data and try to recover our coefficients again. We might first naively fit a normal glm and ignore the repeated measures which would be incorrect (and also does not yield a significant p-value). But we might also allow individual to be a fixed effect (which also does not identify the linear relationship as being significant).
+
+```{r random-intercept}
+
+wrong.glm <- glm(Y~x, data = mydata)
+summary(wrong.glm)
+
+categorical.glm <- glm(Y ~ x + G, data = mydata)
+summary(categorical.glm)
+
+plot(resid(categorical.glm) ~ mydata$x)
+
+library(lme4) 
+
+m1 <- lmer(Y ~ x + (1|G), data = mydata)
+summary(m1)
+
+plot(resid(m1) ~ mydata$x)
+
+
+```
+
+
+
