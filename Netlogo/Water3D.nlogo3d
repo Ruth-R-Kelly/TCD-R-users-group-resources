@@ -1,0 +1,568 @@
+; Mobile agents that will swin and walk in the landscape
+breed [otters]
+; Water units
+breed [water]
+
+; The pathes in the zero layer will serve as constructrs of the landscape
+patches-own [
+  land?            ; Say that this patch is associated to earth
+                     ;  the others will contain water
+  height-Landscape   ; The height of this patch in the landscape
+]
+
+; Global variables to use
+globals [
+  turn-time  ; Time for automated rotation
+]
+
+;
+water-own [
+  hA      ; Current height of the water
+  hB      ; Past height of the water
+  neigh   ; Neighbors of this water unit
+  nneigh  ; Size of the neighborhood (to save computations)
+]
+
+otters-own [
+  scape-turn ; It will be used to make a consistent turn when avoiding land
+  on-land?   ; Say if the agent is on the land
+]
+
+; Setup Procedure
+to setup
+  ca
+  ; Reset patches
+  ask patches [
+    set land? false
+  ]
+  ; Setup the landscape
+  setup-landscape
+  ; Create the otters, originally in water
+  ask n-of population patches with [pzcor = 0 and not land?] [
+    sprout-otters 1
+    [
+      set size 2
+      set color 33
+      set shape "circle"
+      set scape-turn 0
+      set zcor 2
+      set on-land? true
+    ]
+  ]
+  ; Create the water
+  ask patches with [pzcor = 0 and not land?] [
+    sprout-water 1 [
+      set hA 0
+      set hB hA
+      ; We can choose between 2D or 3D shapes for water
+      set shape ifelse-value Shapes-2D? ["2DSquare"]["square"]
+      set heading 0
+      set size 1.4
+      set color scale-color water-color hA -.2 1.2
+      set zcor scale * hA
+      ; We can choose between two grids: rectangular or hexagonal
+      if Hexagonal-grid? [
+        if xcor mod 2 = 0 [set ycor ycor + .5]
+        set shape ifelse-value Shapes-2D? ["hex"]["square"]
+        set size 1.5
+      ]
+    ]
+  ]
+  ; Generate neighborhoods for water
+  ask water [
+    let r ifelse-value hexagonal-grid? [1.2][1]
+    set neigh water in-radius r
+    set nneigh count neigh
+  ]
+  ; Initial parameters
+  set smoothing 0.999
+  setxyz 0 80 80
+  set turn-time 0
+  reset-ticks
+end
+
+; Setup Landscape create a 3D landscape from a imple layer of patches
+; by diffusion
+to setup-landscape
+  let c ifelse-value rock? [grey][green]
+  ; Initial random heights for the layer
+  ask patches with [pzcor = 0][
+    set height-Landscape random-float 1
+  ]
+  ; Diffuse the heights several times
+  repeat Flatness [diffuse height-Landscape 1]
+
+  ; Normalize the heights and color the landscape patches
+  let MaxH max [height-Landscape] of patches
+  let minH min [height-Landscape] of patches
+  ask patches  with [pzcor = 0][
+    set height-Landscape (height-Landscape - minH) / (MaxH - minH)
+    ; If boxed? (not a torus) delimite the borders
+;    if Boxed? [
+;      if abs pxcor = max-pxcor [set height-Landscape 1]
+;      if abs pycor = max-pycor [set height-Landscape 1]
+;    ]
+    ; Color land areas in patches layer
+    set pcolor scale-color c height-Landscape (water-level - .1) 1
+    ifelse height-Landscape < water-level [set pcolor black][set land? true]
+  ]
+  ; Fill the 3D surface of land areas
+  ask patches with [land?] [
+    let p pcolor
+    ; If we want a more filled land view, we can use all the patches
+    ;   in the column
+    foreach (n-values (9 * (height-Landscape - water-level) / (1 - water-level)) [?]) [
+      ask patch-at 0 0 ? [
+        ;set pcolor p ;
+        set height-landscape [height-landscape] of myself
+        set land? true]
+    ]
+    ; otherwise, we can fill only the patch at the top
+    let al (10 * (height-Landscape - water-level) / (1 - water-level))
+    ask patch-at 0 0 al [set pcolor (p + random-float .5 - .25) set land? true]
+  ]
+  if Boxed? [
+    ask patches with [(abs pxcor) = max-pxcor or (abs pycor) = max-pycor] [
+      set land? true
+      set pcolor ifelse-value (pzcor = 0) [white] [black] ]
+  ]
+  ; Fill in yellow shades the beach areas (the lowest ones)
+  if Beach?
+  [
+    ask patches with [abs (pcolor - c + 2) < 2][set pcolor 45 + (random-float 2 - 1)]
+  ]
+end
+
+; Main Procedure
+to go
+  ; Shallow Water Algorithm: heights represents energies
+
+  ; First step: In parallel, the new depth is computed as the average of
+  ; current depths of neighbors (hA) with some memory (that represents
+  ; the derivative) of the previous step (hB). We store the new state in hB
+  ask water [
+    let nsum sum [hA] of neigh
+    ; omega represents the effect of previous state on the current one
+    let depth omega * nsum / nneigh + (1 - omega) * hB
+    ; smoothing represents the loss of energy (dampening process)
+    set hB depth * smoothing
+  ]
+  ; Swap the current state (hA) with the new one (hB)
+  ask water [
+    let tmp hA
+    set hA hB
+    set hB tmp
+    ; The Z position and the color of the water unit is proportional
+    ; to its height
+    set zcor scale * hA
+    ;set color lput 100 extract-rgb (scale-color water-color hA -.2 1.2)
+    set color (scale-color water-color hA -.2 1.2)
+  ]
+  ; If there must be periodical waves, we put enery to the border when
+  ; needed
+  if waves?[
+    if ticks mod frequency = 0 [
+      ask water with-max [ycor] [ set hA random-float waves-strong]
+      ]
+  ]
+  ; Effect of mobile Agents: otters
+  ask otters [
+    ; See if the otter is on land
+    ifelse on-land?
+    [ ; If so
+      ; move radonmly
+      rt random 10 - 5
+      fd .5
+      ; If it still on land, take its height
+      ifelse is-land?
+      [ set zcor .5 + (9 * (height-Landscape - water-level) / (1 - water-level)) ]
+      ; if not, update its state
+      [ set on-land? false ] ]
+    [ ; If not
+      ; Check if there is land in front of it
+      ifelse land-in-front?
+      [ ; if there is and it is not turning to avoid the land
+        ifelse scape-turn = 0
+        [ ; Decide one turn direction and turn
+          set scape-turn (2 * random 2) - 1
+          rt scape-turn * 30 ]
+        [ ; Continue with the same turn direction
+          rt scape-turn * 30 ] ]
+      [ ; If there is not land in front,
+        ; Move randomly (but in water the movement is more straight)
+        if random 2 = 0 [rt (random 11 - 5)]
+        set scape-turn 0
+        fd speed
+        ; and add some energy to the water it is
+        ask (water in-radius 1) [set hA 1] ]
+      ; Check if it is on land
+      ifelse is-land?
+      [ set on-land? true]
+      [ ; If not, take the height of the water
+        set zcor [zcor] of min-one-of water [distance myself] ] ]
+  ]
+  ; If the automated rotation is checked, then change point of view of
+  ; observer
+  if auto-turn? [
+    orbit-left .5
+  ]
+  tick
+end
+
+to-report land-in-front?
+  let ps (patch-set (patch-ahead 1) (patch-ahead 2) (patch-ahead 3)
+    (patch-ahead 4)
+    ;(patch-at-heading-pitch-and-distance 0 -45 1)
+    (patch-at-heading-pitch-and-distance 0 -45 2)
+    (patch-at-heading-pitch-and-distance 0 -45 3))
+  let rep reduce or [land?] of ps
+  ifelse random 5 = 0 [report false] [report rep]
+end
+
+to-report is-land?
+  report [land?] of patch xcor ycor 0
+end
+@#$#@#$#@
+GRAPHICS-WINDOW
+0
+0
+359
+380
+65
+65
+2.68212
+1
+10
+1
+1
+1
+0
+1
+1
+1
+-65
+65
+-65
+65
+-1
+10
+1
+1
+1
+ticks
+30.0
+
+SLIDER
+8
+10
+180
+43
+omega
+omega
+0
+2
+1.94
+0.01
+1
+NIL
+HORIZONTAL
+
+SLIDER
+336
+10
+428
+43
+population
+population
+0
+10
+10
+1
+1
+NIL
+HORIZONTAL
+
+SLIDER
+336
+43
+428
+76
+speed
+speed
+0
+3
+1
+.01
+1
+NIL
+HORIZONTAL
+
+BUTTON
+348
+81
+411
+114
+NIL
+setup
+NIL
+1
+T
+OBSERVER
+NIL
+NIL
+NIL
+NIL
+1
+
+BUTTON
+348
+116
+411
+149
+NIL
+go
+T
+1
+T
+OBSERVER
+NIL
+NIL
+NIL
+NIL
+1
+
+SLIDER
+8
+142
+180
+175
+water-color
+water-color
+5
+140
+95
+10
+1
+NIL
+HORIZONTAL
+
+SLIDER
+8
+43
+180
+76
+smoothing
+smoothing
+0.9
+1
+0.999
+.0001
+1
+NIL
+HORIZONTAL
+
+SWITCH
+210
+10
+313
+43
+Boxed?
+Boxed?
+1
+1
+-1000
+
+SLIDER
+8
+76
+180
+109
+Scale
+Scale
+0
+5
+2
+.1
+1
+NIL
+HORIZONTAL
+
+SWITCH
+8
+109
+180
+142
+Hexagonal-grid?
+Hexagonal-grid?
+1
+1
+-1000
+
+SWITCH
+8
+175
+98
+208
+waves?
+waves?
+0
+1
+-1000
+
+SLIDER
+98
+175
+201
+208
+frequency
+frequency
+0
+200
+50
+10
+1
+NIL
+HORIZONTAL
+
+SWITCH
+210
+43
+313
+76
+rock?
+rock?
+0
+1
+-1000
+
+SWITCH
+210
+75
+313
+108
+auto-turn?
+auto-turn?
+0
+1
+-1000
+
+SLIDER
+97
+208
+201
+241
+waves-strong
+waves-strong
+0
+5
+2
+.1
+1
+NIL
+HORIZONTAL
+
+SLIDER
+210
+174
+313
+207
+water-level
+water-level
+0
+1
+0.85
+.01
+1
+NIL
+HORIZONTAL
+
+SLIDER
+210
+141
+313
+174
+Flatness
+Flatness
+0
+100
+10
+1
+1
+NIL
+HORIZONTAL
+
+SWITCH
+210
+108
+313
+141
+Beach?
+Beach?
+0
+1
+-1000
+
+SWITCH
+17
+257
+138
+290
+Shapes-2D?
+Shapes-2D?
+1
+1
+-1000
+
+@#$#@#$#@
+@#$#@#$#@
+default
+true
+0
+Polygon -7500403 true true 150 5 40 250 150 205 260 250
+
+2dsquare
+false
+0
+Rectangle -7500403 true true 0 0 300 300
+
+circle
+false
+0
+Circle -7500403 true true 0 0 300
+
+goldfish
+true
+0
+Polygon -7500403 true true 150 15 164 32 182 80 200 100 207 121 180 114 180 149 175 208 163 258 182 296 153 278 125 295 142 257 133 208 123 141 123 116 99 123 104 106 122 80 138 32
+
+hex
+false
+0
+Polygon -7500403 true true 0 150 75 30 225 30 300 150 225 270 75 270
+
+square
+false
+0
+Rectangle -7500403 true true 30 30 270 270
+
+@#$#@#$#@
+NetLogo 3D 5.3
+@#$#@#$#@
+@#$#@#$#@
+@#$#@#$#@
+@#$#@#$#@
+@#$#@#$#@
+default
+0.0
+-0.2 0 0.0 1.0
+0.0 1 1.0 0.0
+0.2 0 0.0 1.0
+link direction
+true
+0
+Line -7500403 true 150 150 90 180
+Line -7500403 true 150 150 210 180
+
+@#$#@#$#@
+0
+@#$#@#$#@
