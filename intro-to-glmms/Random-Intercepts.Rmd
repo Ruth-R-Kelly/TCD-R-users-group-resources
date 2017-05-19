@@ -1,0 +1,80 @@
+---
+title: "Random Intercept Models - variance components"
+output:
+  html_document: default
+  html_notebook: default
+---
+
+
+Random intercept models are the basic type of random effect you can add to a linear model to turn it into a generalised linear mixed effects model or GLMM. Essentially, such a model has a fixed part that includes coeffcients that affect the mean of the data and also a random part with coeffcinets that affect the variance: $Y_i \sim dnorm(\mu, \sigma^2)$. These models are also a type of variance partioning, whereby the overall total variance $\sigma^2$ is split into partitions attibutatle to different groupings of the data. This is the basic model we will explore first.
+
+## Variance Partitioning
+
+In this model, we have a nested data structure with three levels: observations nested within groups, nested within a larger community which ultimately together form a population (or some such structure of cells/tissues/organs or individuals/counties/countries etc...). We will simulate the data for this example so we can see how it is formed.
+
+```{r sim-var-part}
+rm(list=ls())
+graphics.off()
+set.seed(2)
+
+library(viridis)
+
+n.obs    <- 4
+n.groups <- 24
+n.comms  <- 6
+n.total  <- n.obs * n.groups * n.comms
+
+# standard deviations for each level
+s.groups <- 2
+s.comms  <- 18.5
+s <- 4.2 # residual error
+
+# calculate the random effects for each grouping variable
+V.groups <- rnorm(n.groups, 0, s.groups)
+V.comms  <- rnorm(n.comms,  0, s.comms)
+
+# allocate each observation to a category for groups and communities
+G <- data.frame(groups = sort(rep(1:n.groups, n.obs*n.comms)),
+                comms  = sort(rep(1:n.comms, n.obs*n.groups)))
+
+
+
+
+# grand mean
+b0 <- 23
+
+# calculate the mean
+mu <- b0 + V.groups[G$groups] + V.comms[G$comms]
+
+# simulate the data at the observation level
+Y <- mu + rnorm(n.total, 0, s)
+
+mydata <- data.frame(Y = Y, groups = G$groups, comms = G$comms)
+
+# plot the data
+palette(viridis(n.comms))
+with(mydata, boxplot(Y ~ groups, col = sort(rep(1:n.comms, n.groups/n.comms))))
+
+
+```
+
+With the data simluated, we can start modelling it using a variance components model, which is essentially a random effects model with a grand mean, and variance terms for community, group and residual. Remember that we specified our data using means and standard deviations as required by `rnorm(n, mean, sd)` so we need to match up these estimates. And it works!
+
+```{r model-var-part}
+library(lme4)
+
+# fit a random effects model
+m1 <- lmer(Y ~ 1 + (1|groups) + (1|comms), data = mydata)
+summary(m1)
+
+# compare with our specified estimates
+print(c(groups = s.groups, comms = s.comms, Residual = s))
+
+
+# use the nesting notation, which basically deals with a labelling situation if you 
+# decide to reuse the group labels within each higher level grouping (communities) 
+# in this case. For this example the result is equivalent.
+m2 <- lmer(Y ~ 1 + (1|comms/groups), data = mydata)
+summary(m2)
+```
+

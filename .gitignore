@@ -46,3 +46,11 @@ Network Trash Folder
 Temporary Items
 .apdisk
 .Rproj.user
+
+# i think its useful to not include the nb.html files as i am having some 
+# difficulty when i move computers. Might as well let the local sessoin
+# rebuild them.
+*.nb.html
+
+.Rhistory
+
