@@ -1,0 +1,283 @@
+---
+title: "A whistlestop overview of Linear Models, Generalised Linear Models and GLMMs"
+author: "Ruth Kelly"
+date: "24 October 2017"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+```{r load r libraries, include = FALSE, echo = FALSE}
+
+library("car")  ## for calculating Anova tables
+library("multcomp") ## for doing post-hoc tests
+library("lme4")
+
+```
+
+
+### Notes and code for TCD R-users group 
+
+
+### Linear models 
+
+Describe a continuous response variable as a linear function of one or more predictor variables. This encompasses a broad range of relatively simple models such as Linear regression, t-tests, anova's and ancova's, but can they can also be easily extended into more complex models by the inclusion of more predictor variables.  
+
+Key assumptions:
+
+* Normal distribution of model residuals
+* Homogeneity of variance
+* Linearity of relationship between predictor variables and the measured response.
+* Data points are independent of one another
+ 
+
+To run a simple linear model in R use the function 'lm' and the standard model format
+
+i.e. lm(dependent variable~Explanatory variable, data = dataset)
+
+
+ 
+*Note: Linear models can have multiple response variables but we're going to talk about models with a single response today.* 
+
+```{r an example of a linear model}
+
+### for a simple example load the dataset iris 
+data(iris)
+
+### this dataset contains information on morphological attributes of three species of iris.  A summary of the data is provided by. 
+summary(iris)
+
+plot(iris)
+names(iris)
+
+### choose a single species for a first simple model eg. 
+
+setosa1 <- iris[iris$Species == "setosa",]
+setosa1 <- droplevels(setosa1)
+
+
+####  
+model1 <- lm(Petal.Length ~ Petal.Width, data = setosa1)
+
+plot(Petal.Length ~ Petal.Width, setosa1)
+
+abline(model1, col='red') #plots lm line, slope and intercept can be found in summary
+
+# Model validation
+
+# Are residuals normally distributed?
+
+## To visualize
+hist(residuals(model1))
+qqnorm(residuals(model1))
+qqline(residuals(model1))
+
+### to formally test this examine you may use shapiro.test (there are many options), ## P > 0.05 indicates distribution is not significantly different from normal. 
+
+shapiro.test(residuals(model1))
+
+# 	Shapiro-Wilk normality test
+# 
+# data:  residuals(model1)
+# W = 0.97916, p-value = 0.517
+
+####
+
+
+# Homegeneity of variance
+
+## plot residuals against predictor variables. Here you should see no pattern
+
+plot(residuals(model1) ~ setosa1$Petal.Width)
+
+## The model can be easily expanded to add more variables using "+" or "*" for interactions 
+
+#e.g. 
+
+
+model2 <- lm(Petal.Length ~ Petal.Width + Species, data = iris) ## etc
+
+######
+
+```
+
+
+## **Generalised** linear models
+
+### The key difference between *General* Linear Models and **Generalised** Linear Models is that in Generalised Linear Models are designed for use with non-normal response data. 
+
+For these models you must specify an alternative distribution which represents your data (these are known as families):
+
+* Gamma - For non-normal continous data, bounded at zero 
+* Binomial - for presence/absence data or proportions 
+* Poisson - Count data 
+* Negative Binomial - Overdispersed countdata
+* Zero-Inflated Poisson/Negative Binomial for data with a lot of zeros. 
+
+Writing these models in R is like writing a linear model except that you use the function 'glm' and must now specify the distribution 'family' and oftern the link function for that family, for all those listed above 'log' is the most commonly used link function except the Binomial for which a 'logit' link is most commonly used. 
+
+e.g. 
+
+i.e. glm(dependent variable~Explanatory variable, family = distribution(link = ""),  data = dataset)
+
+
+Note: As previously, normality should be judged based on the distribution of the model residuals (not the raw data).
+
+*Further examples of GLM's and data from different distribution families is given in the code file "more_GLM_examples_kellyr_25_10_2017"
+
+```{r GLM}
+
+### 
+
+
+chem <- read.csv("chem_example.csv")
+
+##### This dataset contains data on soil chemistry for quadrats within 6 sites. 
+##### The variable of interest is burning, in particular it's effect on soil chemistry
+
+
+names(chem)
+str(chem)
+summary(chem)
+
+#### Let's look at P - Phosphorus
+
+summary(chem$P)
+### 
+#### an optimist fits a normal model first.. 
+
+mod_norm <- lm(P~Burnt*Habitat, data = chem)
+
+hist(residuals(mod_norm))
+shapiro.test(residuals(mod_norm))
+##### not normal...
+
+plot(mod_norm)
+
+
+##### Try a gamma distribution with a log link
+
+mod_gamma <- glm(P~Burnt*Habitat, data = chem, family = "Gamma"(link = "log"))
+plot(mod_gamma)
+
+res1 <- residuals(mod_gamma, type = "deviance")
+
+hist(res1)
+shapiro.test(res1)
+
+#####
+
+summary(mod_gamma)
+### N.B. this doesn't do an Anova test, it just produces an Anova table based on the model you have already created.  The 'type =  III' part is important here, as it means that the the order in which terms are listed in the model does not effect the calculated significance (each term is treated as though it were added last).
+
+Anova(mod_gamma, type = "III")
+
+
+##########
+
+
+
+```
+
+
+## **Generalised** linear **Mixed** models
+
+### The key difference between *Generalised* Linear Models and Generalised Linear **Mixed** Models, is that mixed models include 'Random' effects. 
+
+A Random term in a 'mixed' model is used to account for non-independence or pseudoreplication in study design or data. 
+
+Common examples include: 
+
+- Repeated measures from the same individual over time
+
+- Spatial correlation - Measures taken from same location or group of individuals with a larger study population. 
+
+- Temporal correlation – Measures taken on the in the same months or years.
+
+- Nested designs e.g. several quadrats within each site, several chicks within each nest etc.
+
+
+Mixed models are commonly used for hierarchical study designs and are sometimes also called 'Hierarchical models'.
+
+
+
+#### Deciding whether a variable is 'random' or 'fixed'
+
+This depends on the research question and the hypothesis being tested. 
+
+But here are some guiding questions from Thomas et al. "Data analysis with R statistical software"
+
+1. Does the variable represent spatial or temporal autocorrelation, repeated measures or hierarchical structure?  - If so, Random
+
+2. Do we want to know how factor levels differ and by how much? i.e. Do we want to estimate the effect size for factor levels? - If so, Fixed
+
+3. Are levels a random sample of a larger “population”? (i.e we haven’t measured all possible categories) - If so, Random
+
+
+
+#### Coding mixed models. 
+
+There and lots of available packages my favourite is glmmADMB, (but apparantly glmmmTMB is the new fancy option).  Here, I use lme4, it's one of the most commonly used and easily available from Cran. 
+
+Model coding formulas follow this format:
+
+i.e. glmer(dependent variable~Explanatory variable + (1|Random factor), family = distribution(link = ""), data = dataset)
+
+
+
+#### coding nested random effects
+
+Random effects are specified as e|g, where e is an effect and g is a grouping factor (which must be a factor variable, or a nesting of/interaction among factor variables). For example, the formula would be 1|block for a random-intercept model, with data grouped into blocks. A model of nested random effects (block within site) would be 1|site/block; a model of crossed random effects (block and year) would be (1|block)+(1|year). 
+
+*Note: There are more sophiscated methods of dealing with spatial and temporal correlation, when these vary along continous gradients.  Random effects are for when time/space are grouped into factorial variables (correlation structures in "?gls")*
+
+
+```{r GLMMs Mixed models}
+
+### Using the same dataset as the previous example, but this time using Site as a grouping factor to account for pseudoreplication/correlation of measures within locations
+
+
+mod_gamma_mixed <- glmer(P~Burnt*Habitat + (1|Site), data = chem, family = "Gamma"(link = "log"))
+
+res1 <- residuals(mod_gamma_mixed, type = "deviance")
+
+hist(res1)
+shapiro.test(res1)
+
+#### 
+
+summary(mod_gamma_mixed)
+
+
+###  Out of curiousity let's compare this output with that of the previous GLM without accounting for correlation within sites. 
+
+Anova(mod_gamma_mixed, type = "III")
+
+Anova(mod_gamma, type = "III")
+
+### Here we can see that the effect of burning on soil phosphorous only becomes obvious after accounting from the effect of differences between sites.  
+
+```
+
+## Recommended resources
+
+http://glmm.wikidot.com/
+
+https://github.com/Ruth-R-Kelly/TCD-R-users-group-resources -  (see Andrew Jacksons intro to glmms and Kevin Healy's MCMCglmm)
+
+
+Articles
+     Bolker, et al. 2009. Generalized linear mixed models: a practical guide for    ecology  and evolution. Trends in Ecology & Evolution 24: 127-135.
+
+    Zuur AF, Ieno EN, Elphick CS.. A protocol for data exploration to avoid common statistical problems. Methods Ecol Evol 1: 3-14
+
+Books 
+
+Everything you ever needed to know : Zuur et al. 2009 Mixed Effects Models and Extensions in Ecology with R
+
+A practical how to guide : Thomas et al. Data Analysis with R statistical Software: A Guidebook for Scientists
+
+
+
