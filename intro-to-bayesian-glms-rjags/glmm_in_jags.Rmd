@@ -3,6 +3,9 @@ title: "Linear Model in JAGS"
 output: html_notebook
 date: "`r Sys.Date()`"
 ---
+
+Before working with the package `rjags` you will need to separately install [JAGS](http://mcmc-jags.sourceforge.net).
+
 In this example, we build a linear regression model, and include to finish, add a random effect. Models are run in JAGS.
 
 ```{r setup}
