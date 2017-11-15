@@ -1,0 +1,149 @@
+---
+title: "Linear Model in JAGS"
+output: html_notebook
+date: "`r Sys.Date()`"
+---
+In this example, we build a linear regression model, and include to finish, add a random effect. Models are run in JAGS.
+
+```{r setup}
+library(rjags)
+
+# load lme4 only to access the dataset
+# We could just address it long hand via lme4::sleepstudy but im being lazy.
+library(lme4)
+```
+
+
+We will use the 'sleepstudy' dataset from the package `lme4` which matches the simple linear effects model with a random effect in the example for the general linear mixed effects fitting function `?lme4::lmer`.
+
+## A simple linear regression
+
+First we define our model as a string for JAGS.
+```{r}
+
+# Define our model
+modelstring <- '
+  model {
+    # Likelihood
+    for (i in 1:N){
+
+      Y[i] ~ dnorm(mu[i], tau)
+      mu[i] <- b0 + b1 * X[i]
+
+    }
+    
+    # Prior
+    b0 ~ dnorm(0, 100 ^ -2)
+    b1 ~ dnorm(0, 100 ^ -2)
+    sigma ~ dunif(0, 100)
+    tau <- 1 / (sigma ^ 2) 
+  }
+'
+
+```
+
+Now we need to bundle up our data and pass it to rjags for fitting.
+
+```{r run-lm}
+
+# Set up data
+data = list( N = nrow(sleepstudy), 
+             X =  sleepstudy$Days,
+             Y = sleepstudy$Reaction)
+
+# Run jags
+model <- jags.model(textConnection(modelstring), data = data, 
+                 n.chains = 3)
+
+output <- coda.samples(model=model,
+                    variable.names=c("b0", "b1", "sigma"), 
+                    n.iter = 5000,
+                    thin = )
+
+```
+
+```{r plot-bayes-lm}
+# Plot output
+plot(output)
+
+```
+
+
+## Adding the random effect
+
+The random effect in this example is by *Subject*, with multiple observations made on the same subject. In this simple random intercept model, we want to allow individuals to differ from their expected value (the intercept) by a (hopefully relatively) small deviation. The mean of each individuals' deviations will be described by a normal distribution, and by a variable $U[j]$ for the jth individual described by $U_j \sim N(0, \sigma^2_U)$.
+
+We define a new jags model
+
+```{r random-jags}
+# Define our model
+modelstring <- '
+  model {
+    # Likelihood
+    for (i in 1:N){
+
+      Y[i] ~ dnorm(mu[i], tau)
+
+      # The code U[Subject[i]] looks up the subject identifier for the ith 
+      # individual and extracts the corresponding deviation from U which 
+      # is defined after the loop over i.
+      mu[i] <- b0 + b1 * X[i] + U[Subject[i]]
+
+    }
+
+    # random parts
+    #
+    # Pull out the random deviations for the variable U, one for each 
+    # subject
+    for (j in 1:S){
+      U[j] ~ dnorm(0, tau_U)
+    }
+    
+    # Prior
+    b0 ~ dnorm(0, 100 ^ -2)
+    b1 ~ dnorm(0, 100 ^ -2)
+    
+    sigma ~ dunif(0, 100)
+    tau <- 1 / (sigma ^ 2) 
+
+    sigma_U ~ dunif(0, 100)
+    tau_U <- 1 / (sigma_U ^ 2)
+  }
+'
+
+```
+
+Now pass on the additional data which is $S$ the number of subjects in the dataset, and $Subject$ which is the column Subject in the dataset. The only thing we need to do is convert this factor labelled column which starts at subject 308 and runs to 372, into a sequence starting at 1 and running to 18: this is acheived easily by using `as.numeric(sleepstudy$Subject)`.
+
+```{r fit-random, fig.height=15}
+# Set up data
+data <- list( N = nrow(sleepstudy), 
+              S = length(levels(sleepstudy$Subject)),
+              Subject = as.numeric(sleepstudy$Subject),
+              X =  sleepstudy$Days,
+              Y = sleepstudy$Reaction)
+
+# Run jags
+model <- jags.model(textConnection(modelstring), data = data, 
+                 n.chains = 3)
+
+output <- coda.samples(model=model,
+                    variable.names=c("b0", "b1", "sigma", "sigma_U"), 
+                    n.iter = 5000,
+                    thin = )
+
+
+```
+
+And plot the output
+```{r plot-random}
+# Plot output
+plot(output)
+
+```
+
+
+
+
+
+
