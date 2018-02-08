@@ -1,6 +1,8 @@
 ### Playing with the package 'bibliometrix' to see how api's work and make a 
 ## collaborator network plot. This is a really nice package and there's lots to do
 ## with it.  See : http://www.bibliometrix.org/
+## Also there's a nice function map here. . 
+## http://www.bibliometrix.org/bibliometrixfunctions2.jpg
 
 ####install.packages("bibliometrix")
 ### note there are a lot of dependencies to download for this!
