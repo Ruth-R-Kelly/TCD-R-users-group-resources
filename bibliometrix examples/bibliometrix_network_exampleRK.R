@@ -12,9 +12,9 @@ library(bibliometrix)
 ### get your api key from 
 ### https://dev.elsevier.com/sc_apis.html
 
-### and insert it below where the code reads "your_api_here"
+### and insert it below where the code reads "add_your_api_key_here"
 
-apikey1 <- "your_api_here"
+apikey1 <- "add_your_api_key_here"
 
 ### to find your scopus ID - use.. 
 
@@ -32,6 +32,8 @@ names(m)
 AuthorNet <- biblioNetwork(m$M, "collaboration", "authors")
 
 str(AuthorNet)
+
+AuthorNet
 
 net <- networkPlot(AuthorNet, n = 100, Title = "Ruth's collaboration network", type = "kamada",
                    size = 7, labelsize = 0.6)
