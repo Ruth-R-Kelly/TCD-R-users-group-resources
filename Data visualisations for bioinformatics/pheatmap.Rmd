@@ -1,0 +1,253 @@
+---
+title: "Heat Maps"
+author: "Fiona Roche"
+date: "4/18/2018"
+#output: ioslides_presentation
+output: html_document
+
+---
+
+<style type="text/css">
+
+body{ /* Normal  */
+      font-size: 14px;
+  }
+
+code.r{ /* Code block */
+    font-size: 16px;
+}
+pre { /* Code block - determines code spacing between lines */
+    font-size: 16px;
+}
+</style>
+
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = FALSE)
+```
+
+
+
+
+
+
+## Overview
+
+- How to load and run pheatmap in R
+- How to edit the display of your heatmap
+- How to add annotations
+- How to export elements belonging to each cluster
+
+## How to install and load pheatmap in R
+
+```{r install, echo = TRUE}
+
+# Pheatmap is available through the bioconductor suite
+source("http://bioconductor.org/biocLite.R")
+biocLite("pheatmap")
+biocLite("dplyr")
+library("pheatmap") 
+library("dplyr")
+```
+
+
+## First create a sample dataset
+
+```{r test, echo = TRUE}
+
+# Example dataset based on Pheatmap tutorial
+# https://rdrr.io/cran/pheatmap/man/pheatmap.html
+test = matrix(rnorm(200,10,0.75), 20, 10)
+test[1:10, seq(1, 10, 2)] = test[1:10, seq(1, 10, 2)] + 3
+test[11:20, seq(2, 10, 2)] = test[11:20, seq(2, 10, 2)] + 2
+test[15:20, seq(2, 10, 2)] = test[15:20, seq(2, 10, 2)] + 4
+test <- as.data.frame(test)
+colnames(test) = paste("Test", 1:10, sep = "")
+rownames(test) = paste("Gene", 1:20, sep = "")
+head(test)
+```
+
+## Run pheatmap
+
+```{r heatmap, echo = TRUE}
+# Pheatmap in default mode uses Euclidean distance and the "complete method"
+pheatmap(test)
+
+```
+
+## Pheatmap using scaling
+
+```{r heatmap5, echo = TRUE}
+# Scale by row to view your data relative to the mean of each row. 
+# The mean is centred on zero.
+# The legend shows Z-scores
+pheatmap(test, scale = "row")
+
+```
+
+## Pheatmap using correlation
+
+```{r heatmap4, echo = TRUE}
+
+pheatmap(test, clustering_distance_rows= "correlation")
+
+```
+
+
+## Editing the display of pheatmap
+
+```{r edit1, echo = TRUE}
+
+# If you want to keep your heatmap in a particular order you can turn off clustering by row. 
+# The heatmap will display rows in the order of your dataframe
+pheatmap(test, cluster_row = FALSE)
+
+```
+
+
+```{r edit2, echo = TRUE}
+
+# Remove the legend
+pheatmap(test, legend = FALSE)
+```
+
+
+```{r edit3, echo = TRUE}
+
+# Remove row labels, useful if you have a very large heatmap
+pheatmap(test, show_rownames = FALSE)
+```
+
+
+```{r edit4, echo = TRUE}
+
+# Show text within cells
+pheatmap(test, display_numbers = TRUE)
+
+```
+
+## Add annotations to your heatmap
+
+```{r annotation1, echo = TRUE}
+
+# Create annotations for columns. 
+# Very useful for generating pretty heatmaps for publications!
+annotation_col = data.frame(
+  CellType = factor(rep(c("CT1", "CT2"), 5)),
+  Time = 1:5
+)
+rownames(annotation_col) = paste("Test", 1:10, sep = "")
+
+head(annotation_col)
+
+```
+
+
+```{r annotation2, echo = TRUE}
+
+# Create annotations for rows
+annotation_row = data.frame(
+  GeneClass = factor(rep(c("Path1", "Path2", "Path3"), c(10, 4, 6)))
+)
+rownames(annotation_row) = paste("Gene", 1:20, sep = "")
+
+head(annotation_row)
+
+```
+
+
+```{r annotation3, echo = TRUE}
+
+# Display column annotations
+pheatmap(test, annotation_col = annotation_col)
+
+```
+
+
+
+```{r annotation5, echo = TRUE}
+
+# Display row and column annotations
+pheatmap(test, annotation_col = annotation_col, 
+         annotation_row = annotation_row)
+
+```
+
+## Label individual cells
+
+```{r label1, echo = TRUE}
+
+# Highlight particular cells within your heatmap
+labels_row = c("", "", "", "", "", "", "", "", "", "", "", "", "", "", "",
+               "", "", "Il10", "Il15", "Il1b")
+pheatmap(test, annotation_col = annotation_col,  annotation_row = annotation_row, labels_row = labels_row)
+```
+
+
+## Introduce Gaps
+
+```{r display1, echo = TRUE}
+
+# Add gaps to make your annotation grouping stand out
+# You can do this manually by turning the clustering by rows off
+# Then you list which rows you would like a gap to be introduced
+# If using this approach, your df needs to be ordered how you want it plotted in the heatmap
+pheatmap(test, annotation_col = annotation_col, annotation_row = annotation_row, 
+         cluster_rows = FALSE, gaps_row = c(10, 14))
+
+```
+
+
+```{r display2, echo = TRUE}
+
+# You can also add gaps within columns. 
+# Here it uses the cutree_col parameter to break the dendrogram into 2 clusters
+pheatmap(test, annotation_col = annotation_col,annotation_row = annotation_row,
+         cluster_rows = FALSE, gaps_row = c(10, 14), cutree_col = 2)
+
+```
+
+
+
+```{r display3, echo = TRUE}
+
+# You can also add gaps at cluster breaks within rows
+pheatmap(test, annotation_col = annotation_col, annotation_row = annotation_row,
+         cluster_rows = TRUE, cutree_col = 2, cutree_rows = 3)
+
+```
+
+
+## Export which data points are associated with which clusters
+
+```{r export, echo = TRUE}
+
+# If you have a large heatmap and want to identify which genes are found within each cluster you have generated, you can do the following
+# Run pheatmap again but this time read it to a variable. Define the number of clusters you want with cutree_rows (.e.g 3)
+result<-pheatmap(test, cluster_cols=TRUE, show_rownames=T, cutree_rows=3)
+# Use cutree function to extract the row names associated with each cluster. 
+# These clusters are ordered the in the same way they appear in the heatmap graphic
+cluster_lists <- cutree(result$tree_row, k=3)[result$tree_row[["order"]]]
+cluster_listsDF <- as.data.frame(cluster_lists)
+# List your clusters
+unique(cluster_listsDF$cluster_lists)
+# Set rownames of this df to a variable (e.g. $gene) so you can use the dplyr filter function
+cluster_listsDF$gene <- row.names(cluster_listsDF)
+head(cluster_listsDF)
+# Filter for all genes associated with a particular cluster
+gene_subset <- filter(cluster_listsDF, cluster_lists == 3)
+gene_subset
+
+```
+
+
+## Further information on Pheatmap
+
+```{r info, echo=TRUE}
+
+# Pheatmap tutorial
+
+# link to R Package Documentation Site
+# https://rdrr.io/cran/pheatmap/man/pheatmap.html
+
+```

@@ -1,0 +1,181 @@
+---
+title: "Data Visualisations for Bioinformatics in R"
+author: "Karsten Hokamp & Fiona Roche"
+date: "18 April 2018"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+## Setup
+The code below uses a couple of libraries that might need to be installed first:
+
+```{r libs}
+#options(repos = c("https://mirrors.ebi.ac.uk/CRAN/")) 
+#install.packages('ggfortify')
+#install.packages('ggplot2')
+# DESeq2 is a BioConductor package:
+#source("https://bioconductor.org/biocLite.R")
+#biocLite("DESeq2")
+```
+
+## Setting the scene
+
+- expression of genes measured on a genome scale (previously microarrays now mostly RNA-seq)
+- thousands of measurements for each sample
+- multiple replicates per condition/strain/timepoint
+- need ways to quickly get an overview of how individual samples compare to each other
+
+## PCA plots
+
+- dimension reduction: compressing loads of data into simple output that captures main trends from the original data
+- useful to detect sample outliers or mis-labelling
+
+Let's start with a small synthetic data set to demonstrate this (two sets of five samples, 100 genes, taken from statquest.org):
+
+```{r synthetic}
+data.matrix <- matrix(nrow=100, ncol=10)
+colnames(data.matrix) <- c(paste("wt", 1:5, sep=''), paste('ko', 1:5, sep=''))
+rownames(data.matrix) <- paste('gene', 1:100, sep='')
+for (i in 1:100) {
+  wt.values <- rpois(5, lambda=sample(x=10:1000, size=1))
+  ko.values <- rpois(5, lambda=sample(x=10:1000, size=1))
+  data.matrix[i,] <- c(wt.values, ko.values)
+}                           
+head(data.matrix)
+
+```
+
+Just from eye-balling the data set one can see similarities amongst the replicates (1-5) and differences between the two groups (wild-type and knock-out).
+
+Here is how to calculate the principal components and plot some info:
+```{r pca}
+pca <- prcomp(t(data.matrix), scale=TRUE)
+plot(pca$x[,1], pca$x[,2])
+biplot(pca)
+```
+Loads of info from biplot, bit too little from the simpler plot.
+
+Let's plot PC1 and PC2 with the samples (including labels) using ggplot2:
+```{r pcaplot1}
+pca.data <- data.frame(Sample=rownames(pca$x),
+                       X=pca$x[,1],
+                       Y=pca$x[,2])
+library(ggplot2, quietly=TRUE)
+ggplot(data=pca.data, aes(x=X, y=Y, label=Sample)) +
+  geom_text() +
+  xlab("PC1") +
+  ylab("PC2")
+```
+
+Interested in the percentage of variation explained by each PC?
+```{r pcavar}
+pca.var <- pca$sdev^2
+pca.var.per <- round(pca.var/sum(pca.var)*100, 1)
+barplot(pca.var.per, main='Scree Plot', xlab='PC', ylab='Percent Variation')
+```
+
+Let's add this to the axis label:
+```{r pcaplot2}
+ggplot(data=pca.data, aes(x=X, y=Y, label=Sample)) +
+  geom_text() +
+  xlab(paste("PC1 - ", pca.var.per[1], "%", sep='')) +
+  ylab(paste("PC2 - ", pca.var.per[2], "%", sep='')) +
+  theme_bw() +
+  ggtitle("My PCA Graph")
+```
+
+In case you're interested you can show which genes are the top drivers for the separation of samples along PC1:
+```{r pcatopgenes}
+loading_scores <- pca$rotation[,1]
+gene_scores <- abs(loading_scores)
+gene_score_ranked <- sort(gene_scores, decreasing=TRUE)
+top_10_genes <- names(gene_score_ranked[1:10])
+pca$rotation[top_10_genes,1]
+data.matrix[top_10_genes,]
+```
+
+## Real data
+
+It's not always so clear cut with real data!
+
+```{r pcareal}
+# library data.table provides 'fread' to get data from web
+library(data.table)
+
+# download data from URL or from local file
+web <- fread('http://bioinf.gen.tcd.ie/rclub/rna-seq_input.txt', header=TRUE)
+real.data <- data.frame(web[,-1], row.names=web$Gene)
+#real.data <- read.table(file='rna-seq_input.txt',sep="\t")
+head(real.data)
+
+# get description of samples
+web <- fread('http://bioinf.gen.tcd.ie/rclub/samples.txt', header=TRUE)
+sample <- data.frame(web[,-1], row.names=web$Sample)
+#sample <- read.table('samples.txt', header=T, sep="\t", row.names = 1)
+factor(sample$Condition)
+
+# add pseudo-count, then log-transform
+real.data.log2 <- log2(real.data+1)
+
+# run prcomp on transposed matrix to calculate principle components
+pca.real <- prcomp(t(real.data.log2))
+plot(pca.real$x[,1], pca.real$x[,2])
+```
+
+
+Quite the clutter - definitely needs labels:
+```{r pcarealplot1}
+pca.real.data <- data.frame(Sample=rownames(pca.real$x),
+                       X=pca.real$x[,1],
+                       Y=pca.real$x[,2])
+
+ggplot(data=pca.real.data, aes(x=X, y=Y, label=Sample)) +
+  geom_text() +
+  xlab("PC1") +
+  ylab("PC2")
+```
+
+One could now go into ggplot2 to add colours etc. but there is an easier way:
+```{r pcarealplot2}
+library(ggfortify, quietly=TRUE)
+autoplot(pca.real, data = sample, main = 'PCA plot', label=TRUE, frame = TRUE, frame.colour = 'Condition')
+```
+
+From the help page: 
+
+"ggfortify helps plotting some popular R packages with ggplot2 in a unified way."
+
+"Rather than using this function, I now recomend using the broom package, which implements a much wider range of methods. fortify may be deprecated in the future."
+
+There is more than one way to do this and the downstream analysis tools bring their own function, for example DESeq2:
+
+```{r pcadeseq}
+library(DESeq2, quietly=TRUE)
+# some sanity checks:
+all(rownames(sample) %in% colnames(real.data))
+all(rownames(sample) == colnames(real.data))
+
+# creating the DESeq object:
+dds <- DESeqDataSetFromMatrix(countData = real.data, colData = sample, design = ~ Condition)
+
+# normalisation
+dds <- DESeq(dds)
+
+# transformation and PCA (only the top 500 genes are used)
+rld <- rlog(dds, blind=FALSE)
+plotPCA(rld, intgroup=c('Condition'))
+
+# PCA plot with prcomp and autoplot on normalised data:
+norm <- counts(dds, normalized=TRUE)
+norm.log2=log2(norm+1)
+pca <- prcomp(t(norm.log2))
+autoplot(pca, data = sample, main = 'PCA plot', label=TRUE, frame = TRUE, frame.colour = 'Condition')
+```
+
+
+Also see devtool 'ggbiplot':
+https://github.com/vqv/ggbiplot
+There is an experimental branch of ggbiplot that is "a complete overhaul of the existing ggbiplot package" but hasn't had any commits for the last three years.
