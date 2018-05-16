@@ -12,17 +12,29 @@ knitr::opts_chunk$set(echo = TRUE)
 
 #### This Github folder contains teaching materials and notes prepared by the TCD R-Users group.
 
+These resources have been prepared by contributors to the R-peer learning group coordinated by Ruth Kelly and Andrew Jackson at the School of Natural Sciences in Trinity College Dublin.  Individual folders contain resources by different people and vary in style and content.  Where possible we have all tried to provide example code in Rmarkdown, contributors so far (in no particular order) are Ruth Kelly, Andrew Jackson, Kevin Healy, Adam Kane, Qiang Yang, Karsten Hofkamp and Fiona Roche.  If you have any questions about any any of the resources please contact Ruth Kelly at kellyr44@tcd.ie
 
-Filenames and resources are as follows..
 
-1. Readme.rmd  - List of available resource 
+Resource folders are as follows..
 
-2. Rmarkdown-Rnotebooks - by Andrew Jackson Nov. 2016
+1. Rmarkdown-Rnotebooks by Andrew Jackson - Nov. 2016
 
-3. Github - Using GitHub by Andrew Jackson Nov. 2016
+2. Github - Using GitHub by Andrew Jackson - Nov. 2016
 
-4. ggplot2rk - Using ggplot2 by Ruth Kelly Dec. 2016
+3. ggplot2rk - Using ggplot2 by Ruth Kelly - Dec. 2016
 
-5. sem_qy -  Causality and Structural Equation Modelling by Qiang Yang Jan. 2017
+4. sem_qy -  Causality and Structural Equation Modelling by Qiang Yang - Jan. 2017
 
-6. dpylr - Data manipulation examples using mainly 'dplyr' and 'reshape2' by Ruth Kelly Feb. 2017
+5. dpylr - Data manipulation examples using mainly 'dplyr' and 'reshape2' by Ruth Kelly - Feb. 2017
+
+6. Intro-to-glmms by Andrew Jackson - March 2017
+
+7. NetLogo by Adam Kane - May 2017
+
+8. MCMCglmm by Kevin Healy - May 2017
+
+9. LM_GLM_M_overview by Ruth Kelly - Oct 2017
+
+10. Intro-to-bayesian-glms-rjags by Andrew Jackson  - November 2017
+
+11. Data visualisation for bioinformatics by Karsten Hofkamp and Fiona Roche - April 2018
