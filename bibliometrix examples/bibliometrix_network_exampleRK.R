@@ -14,14 +14,13 @@ library(bibliometrix)
 
 ### and insert it below where the code reads "add_your_api_key_here"
 
-apikey1 <- "add_your_api_key_here"
+apikey1 <-  "add_your_api_key_here"
 
 ### to find your scopus ID - use.. 
 
 d <- data.frame(last_name = "Kelly", first_name = "Ruth", affiliation =  "Belfast")
 
 IDx <- idByAuthor(df = d, api_key = apikey1)
-
 
 ### retrieve all scopus records for that author Id 
 m <- retrievalByAuthorID(IDx$id, apikey1, remove.duplicated = TRUE)
