@@ -1,0 +1,298 @@
+---
+title: "Multivariate_species_analysis_example_rk_29_05_2018"
+author: "Ruth Kelly"
+date: "29 May 2018"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+## setwd("C:/R/TCD-R-users-group-resources/MultivariateOrdinationApproaches")  set your working directory here
+
+```
+
+```{r load r libraries}
+
+library("vegan")  ## For general multivariate analyses
+library("rgl") ## For 3d plotting
+library("MuMIn") ### for standardising variables by mean and sd
+
+```
+
+
+### Notes and code for TCD R-users group 
+
+
+### Multivariate ordination models
+
+These models incorporate a group of analytical approaches which are useful for analysing data when the there are multiple response variables. Common examples of this include analyses of chemical properties (e.g. soil or water properties), climate data, genetic analyses with multiple markers or species communities. They are particularly useful in that they can circumvent issues with multiple hypothesis testing (i.e. we don't need to run a separate GLM to describe each response and inflate our "false positive/Type I" error rate).
+
+Today, I'll discuss two main types of ordination analyses: 
+
+* Unconstrained - Primarily for exploratory/descriptive analysis
+      - eg. Principle Components Analysis (PCA)
+      - eg. Correspondance Analysis (CA)
+
+* Constrained - may be used for hypothesis testing
+      - Redundancy Analysis (RDA)
+      - Constrained Correspondence Analysis (CCA)
+      - partial RDA/CCA
+      
+
+And my favourite book on the topic is: 
+  Numerical ecology with R by Bocard, Gillet and Legendre (2011) 
+  
+Tara's favourite is:
+ Shaw, P.J.A., 2003. Introductory multivariate statistics for the environmental science.
+
+All of this can be done using the package 'vegan' 
+  Jari Oksanen, F. Guillaume Blanchet, Michael Friendly, Roeland
+  Kindt, Pierre Legendre, Dan McGlinn, Peter R. Minchin, R. B. O'Hara,
+  Gavin L. Simpson, Peter Solymos, M. Henry H. Stevens, Eduard Szoecs
+  and Helene Wagner (2017). vegan: Community Ecology Package. R
+  package version 2.4-4. https://CRAN.R-project.org/package=vegan
+
+Some interesting extensions of these analyses include:
+  * Multiple Correspondence Analysis (MCA) - for categorical data
+  * MEM/PCNM - enables incorporation of spatial structures
+  * Coinertia/procrustes analysis - finds similarities between matrices
+  * Functional/phylogenetic analyses (see Swenson et al. Functional and       Phylogenetic analysis with R book)
+  
+ 
+*Note: Linear models can also have multiple response variables, and allow for interactions between repsonses, see So Many Variables: Joint Modeling in Community Ecology by Warton et al 2015 for a review of that. I won't be talking about it in this session* 
+
+## Example dataset from wildfires study
+
+In this example I'll be using data from a survey of upland areas that were burnt by wildfires in 2011. The survey data includes soil and seedbank information collected in 2012.  One year post fire. 
+
+This dataset is named: 
+"seed_new.csv"
+
+Survey methods etc. are described in the paper: 
+
+Kelly, R., Boston, E., Montgomery, W.I. and Reid, N., 2016. The role of the seed bank in recovery of temperate heath and blanket bog following wildfires. Applied Vegetation Science, 19(4), pp.620-633.
+
+A further r script containing the full analysis of the above ground 
+vegetation described in the paper (including model selection and plotting) is contained in this folder as: 
+"sample_rda_code_for_vegetation_analysis_with_plot.R"
+
+
+```{r what the data looks like}
+
+veg <- read.table("seed_new.csv", sep = ",", header = T)
+
+
+names(veg)  
+
+# # [1] "Date2"                    "Burnt"                   
+#  [3] "Quadrat"                  "X"                       
+#  [5] "Y"                        "Site"                    
+#  [7] "Dung"                     "Heat.load"               
+#  [9] "Habitat"                  "pH"                      
+# [11] "P"                        "N"                       
+# [13] "Slope"                    "Max_age"                 
+# [15] "Altitude"                 "Aspect"                  
+# [17] "Agrostis.cappilaris"      "Agrostis_canina"         
+# [19] "Calluna_vulgaris"         "Carex.viridula"          
+# [21] "Carex.echinata"           "Carex_binervis"          
+# [23] "Carex_panacea"            "Carex_pilulifera"        
+# [25] "Deschampia_flexuosa"      "Drosera_rotundifolia"    
+# [27] "Empetrum_nigrum"          "Epilobium_palustre"      
+# [29] "Erica_cinerea"            "Erica_tetralix"          
+# [31] "Eriophorum_angustifolium" "Eriophorum_vaginatum"    
+# [33] "Galium.saxatile"          "Juncus.acutiflorus"      
+# [35] "Juncus.bulbosus"          "Juncus.effusus"          
+# [37] "Juncus_bufonius"          "Juncus_squarrosa"        
+# [39] "Molinia_caerula"          "Nardus_stricta"          
+# [41] "Potentilla_erecta"        "Sagina_procumbens"   
+
+
+### data contains information on each quadrat and the species 
+# found # there. I keep all my data including covariates and explanatory 
+# together until analysis to stop things getting shuffled separately # #accidently in excel etc.. 
+
+# For our first example we just want the species information. This is in 
+# columns 17-42  .. Create a dataset with just this data. 
+
+
+veg_spe <- veg[,17:42]
+
+ncol(veg_spe)
+# [1] 26
+
+str(veg_spe)
+
+# 'data.frame':  122 obs. of  52 variables:
+#   $ Agrostis.cappilaris       : num  0 0 0 0 0 0 0 0 0 0 ...
+
+# Note the data is structured so that each site is a row and each species
+# is a Column.  This is the standard way to organise this type of data
+# All cells must have values, insert 0's where no species was found.
+
+```
+
+
+
+### Unconstrained ordination
+
+Put simplistically unconstrained ordination approaches find the directions in multivariate space which explain the greatest variation. These then become the 'Axes' of a new space in which the data is plotted.
+
+Have a look at the 3D plots below which open in a separate window to 
+see how different viewpoints influence the spread of the points. 
+
+
+```{r a brief look into multivariate space}
+
+#### an example plotting our sites based on the soil chemistry
+#names(veg_spe)
+with(veg, plot3d(pH, P, N, 
+                  type="s"))
+
+### an example with morphology
+data(iris)
+#summary(iris)
+
+with(iris, plot3d(Sepal.Length, Sepal.Width, Petal.Length, 
+                  type="s", col=as.numeric(Species)))
+
+
+
+
+```
+
+
+The main difference between different approaches is to do with how they 
+measure distances between sites (or samples etc).  PCA uses a euclidean 
+distance and is suitable for normally distributed data and continous variables. Species data (i.e. count data) is usually either transformed before analysis with PCA, or directly analyses with Correspondance Analysis (CA) (which uses a Chi squared distance metric).  CA will only work with non-negative integers. 
+
+The next code piece runs a CA on our species data and plots this so we can see what happens. 
+
+*Note the function 'rda' runs a PCA in 'vegan' and the function 'cca' runs a CA* 
+
+
+```{r CA of seed data}
+
+CA_mod <- cca(veg_spe)
+
+### Investigating the model outputs!
+### Warning there's a lot in here!  
+
+summary(CA_mod)
+
+#### Of particular importance are 'inertia' which is equivalent to the
+## variance explained
+
+## And 'scores' which are the positions of the sites and species on the 
+## CCA axes. 
+
+### How many axes are worth talking about. 
+
+screeplot(CA_mod)
+screeplot(CA_mod, bstick = TRUE)
+
+##### plotting the ordination space.
+### Note: Ordination plots are notoriously ugly!
+## Or see Karsten and Fiona's code on "data visualisations for bioinformatics".
+
+### It can be useful visualise your sites based on some other attribute 
+## e.g. in this case burning. 
+
+ordiplot(CA_mod, type = "n")
+text(CA_mod, display = "species", cex = 0.4)
+points(CA_mod, display = "sites", col = as.numeric(veg$Burnt), pch = 16)
+```
+
+### Constrained ordinations
+
+Constrained ordinations link a response matrix (e.g. species) with a set of explanatory variables (e.g. Environmental characteristics), and thus allow for direct testing of hypothesis.
+
+They are referred to as 'constrained' because the axes of the ordination 
+plot are constrained such that they represent some linear combination of the explanatory variables. 
+
+Look again at our 3d plot of the iris data, note how the species separate in some views but not in others. 
+
+```{r back to 3D examples }
+### an example with morphology
+data(iris)
+
+with(iris, plot3d(Sepal.Length, Sepal.Width, Petal.Length, 
+                  type="s", col=as.numeric(Species)))
+
+```
+
+### Canonical Correspondence Analysis
+
+Here's an example of a constrained approach using our Canonical Correspondence Analysis (CCA) of the vegetation data and 
+relating it to the environmental data. 
+
+```{r Canonical Correspondence Analysis}
+
+### Select the environmental data from the dataframe
+names(veg)
+env <- veg[,c(2,6,10,11,12,13)]
+
+names(env)
+#[1] "Burnt" "Site"  "pH"    "P"     "N"     "Slope"
+
+### We should standardise our explanatory variables, so that the 
+### continous variables are represented as standard deviations from the mean
+env2 <- stdize(env, binary = "omit")
+names(env2)
+head(env2)
+
+#### Our model formula looks similar to those we write for linear models
+
+CCA_mod <- cca(veg_spe ~ Burnt + z.pH + z.P + z.N + z.Slope ,                data = env2)
+
+### investigate our results
+
+### remember inertia is like variance explained and scores are positions in CCA space.  
+
+print(CCA_mod)
+summary(CCA_mod)
+
+plot(CCA_mod)
+text(CCA_mod, display = "species", cex = 0.5)
+
+
+```
+
+### Accounting for confounding factors/groupings (eg. partial CCA/RDA)
+
+Here, I set 'Site' as a 'condition' variable, this runs an RDA with the explanatory variables after accounting for differences between sites (equivalent to running an RDA with the explanatory variables on the residuals of an RDA with just 'Site'). 
+
+```{r significance testing}
+
+### use the argument 'Condition'
+
+CCA_mod2 <- cca(veg_spe ~ Burnt + z.pH + z.P + z.N + z.Slope + Condition(Site), data = env2)
+
+print(CCA_mod2)
+
+plot(CCA_mod2, display = "bp", xlim = c(-10,10), ylim = c(-10,10))
+text(CCA_mod2, display = "species", cex = 0.5)
+points(CCA_mod2, display = "sites", col = as.numeric(veg$Burnt))
+
+```
+
+### Testing for significance by pemutations 
+
+Permutation tests shuffle the species dataset and test whether the fitted RDA model explains more variation than expected by chance. 
+See ?anova.cca for details. 
+
+
+
+```{r Permutation testing }
+
+### of full model
+anova.cca(CCA_mod2)
+
+### of axes
+anova.cca(CCA_mod2, by = "axis")
+
+### of explanatory variables
+anova.cca(CCA_mod2, by = "margin")
+
+```
+
+
