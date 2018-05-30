@@ -38,3 +38,5 @@ Resource folders are as follows..
 10. Intro-to-bayesian-glms-rjags by Andrew Jackson  - November 2017
 
 11. Data visualisation for bioinformatics by Karsten Hofkamp and Fiona Roche - April 2018
+
+12. Multivariate Ordination Approaches - Ruth Kelly - May 2018
