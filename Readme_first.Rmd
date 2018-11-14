@@ -42,3 +42,5 @@ Resource folders are as follows..
 12. Multivariate Ordination Approaches by Ruth Kelly - May 2018
 
 13. Intro_to_mapping by Ruth Kelly  - October 2018
+
+14. DIY automated plotting by Annabel Smith - November 2018
